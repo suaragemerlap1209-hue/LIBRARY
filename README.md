@@ -25,7 +25,7 @@ Lumina Library memudahkan pengelolaan koleksi buku, peminjaman, denda keterlamba
 | Backend | Laravel 13 |
 | Frontend | Blade + Tailwind CSS |
 | Autentikasi | Laravel Breeze |
-| Database | SQLite / MySQL |
+| Database | SQLite |
 | Build Tool | Vite |
 | Testing | Pest |
 
