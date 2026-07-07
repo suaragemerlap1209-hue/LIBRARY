@@ -12,7 +12,7 @@ Lumina Library memudahkan pengelolaan koleksi buku, peminjaman, denda keterlamba
 - **Katalog Buku** — Pencarian dan penelusuran koleksi buku secara publik maupun oleh anggota
 - **Peminjaman & Pengembalian** — Pelacakan status pinjaman buku secara real-time
 - **Perhitungan Denda Otomatis** — Denda keterlambatan Rp1.000/hari, dihitung otomatis via Laravel Scheduler
-- **Pembayaran QRIS** — Pembayaran denda semi-otomatis dengan upload bukti transfer
+- **Pembayaran manual dan QRIS** — Pembayaran denda semi-otomatis dengan upload bukti transfer
 - **Notifikasi Terjadwal** — Pengingat jatuh tempo pinjaman via email otomatis
 - **Kartu Anggota Digital** — Kartu keanggotaan digital untuk setiap pengguna
 
