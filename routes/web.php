@@ -6,8 +6,20 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
-});
+    return view('pages.home');
+})->name('home');
+
+Route::get('/katalog', function () {
+    return view('pages.home'); // placeholder sementara
+})->name('catalog.public');
+
+Route::get('/tentang', function () {
+    return view('pages.home'); // placeholder sementara
+})->name('about');
+
+Route::get('/bantuan', function () {
+    return view('pages.home'); // placeholder sementara
+})->name('bantuan');
 
 Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified', 'role:admin'])
@@ -33,13 +45,13 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
 })->name('books.index');
 
 Route::get('/books/create', function () {
-    return view('admin.book-form', [
+    return view('admin.book-from', [
         'categories' => \App\Models\Category::all(),
     ]);
 })->name('books.create');
 
 Route::get('/books/{book}/edit', function (\App\Models\Book $book) {
-    return view('admin.book-form', [
+    return view('admin.book-from', [
         'book' => $book,
         'categories' => \App\Models\Category::all(),
     ]);
