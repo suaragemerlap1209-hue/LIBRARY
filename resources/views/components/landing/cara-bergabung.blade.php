@@ -1,4 +1,4 @@
-<section id="how" class="py-24 px-8 lg:px-16 bg-white reveal">
+<section id="cara-bergabung" class="py-24 px-8 lg:px-16 bg-white reveal">
     <div class="max-w-4xl mx-auto text-center">
         <p class="text-xs font-medium tracking-widest uppercase text-[#6B7564] mb-2">Cara Bergabung</p>
         <h2 class="font-display text-3xl text-[#1A1A18] mb-3">Tiga Langkah Mudah</h2>

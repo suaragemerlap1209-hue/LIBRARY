@@ -10,7 +10,7 @@
         <div class="flex items-center justify-center gap-3 flex-wrap">
             <a href="{{ route('register') }}"
                class="px-8 py-3.5 rounded-full bg-[#16331F] text-white text-sm font-medium hover:bg-[#1F4429] transition">
-                Daftar Sekarang — Gratis
+                Daftar Sekarang-Gratis
             </a>
             <a href="{{ route('login') }}"
                class="px-8 py-3.5 rounded-full border border-black/10 text-[#1A1A18] text-sm font-medium hover:border-black/20 transition">
