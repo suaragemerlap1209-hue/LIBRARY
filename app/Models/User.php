@@ -38,4 +38,14 @@ public function scopeMembers($query)
     return $query->where('role', 'member');
 }
 
+protected static function booted(): void
+{
+    static::creating(function (User $user) {
+        if ($user->role === 'member' && empty($user->member_id)) {
+            $last = static::where('role', 'member')->max('id') ?? 0;
+            $user->member_id = 'MB-' . str_pad($last + 1, 4, '0', STR_PAD_LEFT);
+        }
+    });
+}
+
 }
