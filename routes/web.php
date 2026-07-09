@@ -14,17 +14,8 @@ Route::get('/', function () {
 })->name('home');
 
 Route::get('/katalog', function () {
-    return view('pages.catalog', [
-        'books' => \App\Models\Book::with('category')->latest()->get(),
-        'categories' => \App\Models\Category::pluck('name'),
-    ]);
+    return view('pages.home'); // placeholder sementara
 })->name('catalog.public');
-
-Route::get('/katalog/{book}', function (\App\Models\Book $book) {
-    return view('pages.catalog-show', [
-        'book' => $book->load('category'),
-    ]);
-})->name('catalog.show');
 
 Route::get('/tentang', function () {
     return view('pages.about');
