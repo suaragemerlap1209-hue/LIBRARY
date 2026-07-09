@@ -10,13 +10,27 @@ use Illuminate\Support\Facades\Storage;
 
 class BookController extends Controller
 {
-    public function index()
-    {
-        return view('admin.book', [
-            'books' => Book::with('category')->latest()->paginate(10),
-            'categories' => Category::all(),
-        ]);
+    public function index(Request $request)
+{
+    $query = Book::with('category')->latest();
+
+    if ($request->filled('search')) {
+        $query->where(function ($q) use ($request) {
+            $q->where('title', 'like', '%' . $request->search . '%')
+              ->orWhere('author', 'like', '%' . $request->search . '%')
+              ->orWhere('isbn', 'like', '%' . $request->search . '%');
+        });
     }
+
+    if ($request->filled('category')) {
+        $query->where('category_id', $request->category);
+    }
+
+    return view('admin.book', [
+        'books' => $query->paginate(10)->withQueryString(),
+        'categories' => Category::all(),
+    ]);
+}
 
     public function create()
     {
