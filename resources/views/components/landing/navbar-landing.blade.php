@@ -6,7 +6,7 @@
 
     <ul class="hidden md:flex items-center gap-8">
         <li>
-            <a href="{{ route('home') }}#hero"
+            <a href="{{ route('home') }}"
                class="nav-link text-sm text-[#1F2937] hover:text-[#16331F] transition">
                 Beranda
             </a>

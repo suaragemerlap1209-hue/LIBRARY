@@ -1,4 +1,4 @@
-<x-landing.landing-layout title="Lumina Library — Perpustakaan Digital Makassar">
+<x-landing.landing-layout title="Perpustakaan Lumina">
 
     @push('styles')
         .float-card { animation: floatY 4s ease-in-out infinite; }

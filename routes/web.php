@@ -18,7 +18,7 @@ Route::get('/katalog', function () {
 })->name('catalog.public');
 
 Route::get('/tentang', function () {
-    return view('pages.home'); // placeholder sementara
+    return view('pages.about');
 })->name('about');
 
 Route::get('/bantuan', function () {
