@@ -67,9 +67,10 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-[#374151] mb-1.5">Stok</label>
-                        <input type="number" name="stock" min="0" value="{{ old('stock', $book->stock ?? 0) }}"
-                               class="w-full rounded-xl border-black/10 text-sm focus:ring-2 focus:ring-[#16331F]/20 focus:border-[#16331F]">
-                        @error('stock')
+                        <input type="number" name="stock" min="0" value="{{ old('stock', $book->stock ?? 0) }}"inputmode="numeric"
+                        onkeypress="return event.charCode >= 48 && event.charCode <= 57"
+                        oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                        class="w-full rounded-xl border-black/10 text-sm focus:ring-2 focus:ring-[#16331F]/20 focus:border-[#16331F]">@error('stock')
                             <p class="text-xs text-[#A32D2D] mt-1">{{ $message }}</p>
                         @enderror
                     </div>
