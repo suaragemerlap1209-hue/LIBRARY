@@ -24,7 +24,7 @@
             </a>
         </li>
         <li>
-            <a href="{{ route('home') }}cara-bergabung"
+            <a href="{{ route('home') }}#cara-bergabung"
             class="nav-link text-sm text-[#1F2937] hover:text-[#16331F] transition">
                 Cara Bergabung
             </a>
