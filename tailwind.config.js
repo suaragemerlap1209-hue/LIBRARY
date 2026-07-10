@@ -6,16 +6,30 @@ export default {
     content: [
         './vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php',
         './storage/framework/views/*.php',
+
         './resources/views/**/*.blade.php',
+        './resources/**/*.blade.php',
+        './resources/**/*.js',
+        './resources/**/*.vue',
     ],
 
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                sans: [
+                    'Inter',
+                    ...defaultTheme.fontFamily.sans,
+                ],
+            },
+
+            colors: {
+                cream: '#F7F4EC',
+                'member-sidebar-active': '#1D3B2C',
             },
         },
     },
 
-    plugins: [forms],
+    plugins: [
+        forms,
+    ],
 };
