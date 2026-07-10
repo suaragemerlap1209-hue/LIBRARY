@@ -31,8 +31,9 @@ Route::get('/tentang', function () {
 })->name('about');
 
 Route::get('/bantuan', function () {
-    return view('pages.home'); // placeholder sementara
+    return view('pages.help');
 })->name('bantuan');
+
 
 Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified', 'role:admin'])
