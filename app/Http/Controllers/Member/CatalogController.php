@@ -13,27 +13,28 @@ class CatalogController extends Controller
     {
         $query = Book::with('category');
 
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('author', 'like', "%{$search}%");
+        if ($request->filled('category') && $request->category !== 'All Collections') {
+            $query->whereHas('category', function ($q) use ($request) {
+                $q->where('name', $request->category);
             });
         }
 
-        if ($request->filled('category_id')) {
-            $query->where('category_id', $request->category_id);
+        if ($request->filled('q')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('title', 'like', '%' . $request->q . '%')
+                  ->orWhere('author', 'like', '%' . $request->q . '%');
+            });
         }
 
         return view('member.catalog', [
-            'books' => $query->latest()->paginate(12),
-            'categories' => Category::all(),
+            'books' => $query->latest()->get(),
+            'categories' => Category::pluck('name'),
         ]);
     }
 
     public function show(Book $book)
     {
-        return view('member.book-detail', [
+        return view('member.catalog-show', [
             'book' => $book->load('category'),
         ]);
     }

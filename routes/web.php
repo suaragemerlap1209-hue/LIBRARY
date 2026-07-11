@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\BookController;
 use App\Http\Controllers\Admin\LoanController as AdminLoanController;
 use App\Http\Controllers\Member\CatalogController;
 use App\Http\Controllers\Member\LoanController as MemberLoanController;
+use App\Http\Controllers\Member\FineController as MemberFineController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -114,6 +115,10 @@ Route::middleware(['auth', 'verified', 'role:member'])->prefix('member')->name('
     Route::get('/catalog/{book}', [CatalogController::class, 'show'])->name('catalog.show');
     Route::post('/catalog/{book}/loan', [MemberLoanController::class, 'store'])->name('loans.store');
     Route::get('/loans', [MemberLoanController::class, 'index'])->name('loans.index');
+    Route::patch('/loans/{loan}/return', [MemberLoanController::class, 'returnBook'])->name('loans.return');
+    Route::patch('/loans/{loan}/renew', [MemberLoanController::class, 'renew'])->name('loans.renew');
+    Route::get('/payments', [MemberFineController::class, 'index'])->name('payments.index');
+    Route::post('/fines/{fine}/pay', [MemberFineController::class, 'pay'])->name('fines.pay');
 });
 
 require __DIR__.'/auth.php';
