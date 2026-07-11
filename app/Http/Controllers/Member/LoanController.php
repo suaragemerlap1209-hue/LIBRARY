@@ -13,7 +13,7 @@ class LoanController extends Controller
     public function index()
     {
         return view('member.loan', [
-            'loans' => Auth::user()->loans()->with('book')->latest('borrowed_at')->paginate(10),
+            'loans' => Auth::user()->loans()->with('book.category', 'fine')->latest('borrowed_at')->paginate(10),
         ]);
     }
 
@@ -56,5 +56,48 @@ class LoanController extends Controller
         });
 
         return redirect()->route('member.loans.index')->with('success', 'Peminjaman berhasil diajukan, menunggu persetujuan admin.');
+    }
+
+    public function returnBook(Loan $loan)
+    {
+        if ($loan->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        if (! in_array($loan->status, ['pending', 'active', 'overdue'])) {
+            return back()->with('error', 'Buku ini sudah dikembalikan sebelumnya.');
+        }
+
+        DB::transaction(function () use ($loan) {
+            $loan->update([
+                'returned_at' => now(),
+                'status' => 'returned',
+            ]);
+
+            $loan->book->increment('stock');
+        });
+
+        return back()->with('success', "Buku '{$loan->book->title}' berhasil dikembalikan.");
+    }
+
+    public function renew(Loan $loan)
+    {
+        if ($loan->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        if ($loan->status === 'overdue') {
+            return back()->with('error', 'Buku yang sudah lewat jatuh tempo tidak bisa diperpanjang. Silakan kembalikan dan bayar denda terlebih dahulu.');
+        }
+
+        if (! in_array($loan->status, ['pending', 'active'])) {
+            return back()->with('error', 'Peminjaman ini tidak bisa diperpanjang.');
+        }
+
+        $loan->update([
+            'due_at' => $loan->due_at->addDays(14),
+        ]);
+
+        return back()->with('success', "Masa pinjam '{$loan->book->title}' berhasil diperpanjang 14 hari.");
     }
 }
