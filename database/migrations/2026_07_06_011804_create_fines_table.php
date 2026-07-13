@@ -9,16 +9,16 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-   public function up(): void
-{
-    Schema::create('fines', function (Blueprint $table) {
-        $table->id();
-        $table->foreignId('loan_id')->constrained()->cascadeOnDelete();
-        $table->unsignedInteger('amount');
-        $table->enum('status', ['unpaid', 'paid'])->default('unpaid');
-        $table->timestamps();
-    });
-}
+    public function up(): void
+    {
+        Schema::create('fines', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('loan_id')->constrained()->cascadeOnDelete();
+            $table->unsignedInteger('amount');
+            $table->enum('status', ['unpaid', 'pending', 'paid'])->default('unpaid');
+            $table->timestamps();
+        });
+    }
 
 public function down(): void
 {
