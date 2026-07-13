@@ -12,20 +12,16 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Carbon\Carbon;
 
 class RegisteredUserController extends Controller
 {
-    /**
-     * Display the registration view.
-     */
     public function create(): View
     {
         return view('auth.register');
     }
 
     /**
-     * Handle an incoming registration request.
-     *
      * @throws ValidationException
      */
     public function store(Request $request): RedirectResponse
@@ -33,19 +29,36 @@ class RegisteredUserController extends Controller
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+            'birth_date' => ['required', 'date', 'before:today'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
+
+        $birthDate = Carbon::parse($request->birth_date);
+        $age = $birthDate->age;
+
+        if ($age < 13) {
+            throw ValidationException::withMessages([
+                'birth_date' => 'Pendaftaran anggota minimal berusia 13 tahun.',
+            ]);
+        }
+
+        $maxLoans = $age <= 16 ? 3 : 6;
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'birth_date' => $birthDate,
+            'role' => 'member',
+            'max_loans' => $maxLoans,
+            'status' => 'active',
+            'expired_at' => now()->addYears(3),
         ]);
 
         event(new Registered($user));
 
         Auth::login($user);
 
-        return redirect(route('dashboard', absolute: false));
+        return redirect()->route('member.dashboard');
     }
 }
