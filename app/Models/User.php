@@ -42,8 +42,17 @@ protected static function booted(): void
 {
     static::creating(function (User $user) {
         if ($user->role === 'member' && empty($user->member_id)) {
-            $last = static::where('role', 'member')->max('id') ?? 0;
-            $user->member_id = 'MB-' . str_pad($last + 1, 4, '0', STR_PAD_LEFT);
+            $year = now()->year;
+
+            $lastNumber = static::where('member_id', 'like', "LIB-{$year}-%")
+                ->orderByDesc('member_id')
+                ->value('member_id');
+
+            $nextNumber = $lastNumber
+                ? ((int) substr($lastNumber, -4)) + 1
+                : 1;
+
+            $user->member_id = sprintf('LIB-%d-%04d', $year, $nextNumber);
         }
     });
 }

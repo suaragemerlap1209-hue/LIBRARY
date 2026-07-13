@@ -10,14 +10,21 @@
     <div class="flex min-h-screen">
 
         {{-- ================= SIDEBAR ================= --}}
-        <aside class="w-64 shrink-0 bg-[#152B1E] text-stone-100 flex flex-col justify-between">
+        <aside class="w-64 shrink-0 bg-white border-r border-[#ECE7DC] flex flex-col justify-between px-5 py-6">
             <div>
-                <div class="px-6 pt-8 pb-6">
-                    <h1 class="text-2xl font-serif tracking-wide text-[#E8DCC4]">Lumina</h1>
-                    <p class="text-xs text-stone-400 mt-1">Library Member</p>
-                </div>
+                <div class="flex items-center gap-3 mb-8 px-1">
+                    <div class="w-10 h-10 rounded-xl bg-[#F0EEE6] flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-[#1D3B2C]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c-4 0-7 3-7 7 0 5 4 9 7 11 3-2 7-6 7-11 0-4-3-7-7-7z"/>
+                        </svg>
+                    </div>
+                        <div class="leading-tight">
+                            <p class="font-serif font-semibold text-[16px] text-stone-900">Lumina</p>
+                            <p class="text-[10px] tracking-widest text-stone-400 font-medium uppercase">{{ Auth::user()->name }}</p>
+                        </div>                
+                    </div>
 
-                <nav class="mt-4 flex flex-col gap-1 px-3">
+                <nav class="flex flex-col gap-1">
                     @php
                         $navItems = [
                             ['label' => 'Dashboard', 'route' => 'member.dashboard', 'icon' => 'grid'],
@@ -32,10 +39,10 @@
                             $isActive = request()->routeIs($item['route']);
                         @endphp
                         <a href="{{ Route::has($item['route']) ? route($item['route']) : '#' }}"
-                           class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition
+                           class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition
                                   {{ $isActive
-                                        ? 'bg-[#8B5A2B] text-white'
-                                        : 'text-stone-300 hover:bg-white/5 hover:text-white' }}">
+                                        ? 'bg-[#1D3B2C] text-white'
+                                        : 'text-stone-600 hover:bg-[#F3F1E9]' }}">
                             <x-member.nav-icon :name="$item['icon']" class="w-5 h-5" />
                             {{ $item['label'] }}
                         </a>
@@ -43,21 +50,24 @@
                 </nav>
             </div>
 
-            <div class="px-4 pb-6">
-                <a href="{{ Route::has('member.rooms.reserve') ? route('member.rooms.reserve') : '#' }}"
-                   class="block w-full text-center bg-[#F3C89C] text-[#152B1E] font-semibold text-sm
-                          py-2.5 rounded-lg hover:bg-[#efb87e] transition mb-4">
-                    Reserve a Room
+            <div class="space-y-1">
+                <a href="{{ Route::has('member.card') ? route('member.card') : '#' }}"
+                   class="flex items-center justify-center gap-2 w-full text-center bg-[#1D3B2C] text-white font-semibold text-sm
+                          py-2.5 rounded-xl hover:bg-[#16301F] transition mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    Lihat Kartu Anggota
                 </a>
 
-                <div class="flex flex-col gap-1 border-t border-white/10 pt-4">
+                <div class="flex flex-col gap-1 border-t border-[#ECE7DC] pt-4">
                     <a href="{{ Route::has('member.settings') ? route('member.settings') : '#' }}"
-                       class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-stone-300 hover:bg-white/5 hover:text-white">
+                       class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-stone-500 hover:bg-[#F3F1E9]">
                         <x-member.nav-icon name="settings" class="w-5 h-5" />
                         Settings
                     </a>
                     <a href="{{ Route::has('member.help') ? route('member.help') : '#' }}"
-                       class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-stone-300 hover:bg-white/5 hover:text-white">
+                       class="flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-stone-500 hover:bg-[#F3F1E9]">
                         <x-member.nav-icon name="help" class="w-5 h-5" />
                         Help
                     </a>
