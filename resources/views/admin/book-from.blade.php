@@ -50,27 +50,65 @@
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-[#374151] mb-1.5">Kategori</label>
-                        <select name="category_id" class="w-full rounded-xl border-black/10 text-sm focus:ring-2 focus:ring-[#16331F]/20 focus:border-[#16331F]">
-                            <option value="">Pilih kategori</option>
-                            @foreach($categories ?? [] as $category)
-                                <option value="{{ $category->id }}"
-                                    @selected(old('category_id', $book->category_id ?? '') == $category->id)>
-                                    {{ $category->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('category_id')
-                            <p class="text-xs text-[#A32D2D] mt-1">{{ $message }}</p>
-                        @enderror
-                    </div>
+                   <div x-data="{
+                    query: '{{ old('category', $book->category->name ?? '') }}',
+                    open: false,
+                    categories: {{ ($categories ?? collect())->pluck('name')->toJson() }},
+                    get filtered() {
+                        if (this.query === '') return this.categories;
+                        return this.categories.filter(c => c.toLowerCase().includes(this.query.toLowerCase()));
+                    },
+                    select(name) {
+                        this.query = name;
+                        this.open = false;
+                    }
+                }"
+                class="relative">
+                <label class="block text-sm font-medium text-[#374151] mb-1.5">Kategori</label>
+
+                <div class="relative">
+                    <input type="text" name="category"
+                        x-model="query"
+                        @focus="open = true"
+                        @click="open = true"
+                        @click.outside="open = false"
+                        placeholder="Ketik atau pilih kategori"
+                        autocomplete="off"
+                        class="w-full rounded-xl border-black/10 text-sm pr-10 focus:ring-2 focus:ring-[#16331F]/20 focus:border-[#16331F]">
+
+                    <span @click="open = !open"
+                        class="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#9CA3AF] pointer-events-none transition-transform"
+                        :class="open ? 'rotate-180' : ''">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </span>
+                </div>
+
+                <div x-show="open && filtered.length > 0"
+                    x-cloak
+                    class="absolute z-10 mt-1 w-full bg-white border border-black/10 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                    <template x-for="item in filtered" :key="item">
+                        <button type="button"
+                                @click="select(item)"
+                                x-text="item"
+                                class="w-full text-left px-4 py-2.5 text-sm text-[#374151] hover:bg-[#16331F]/5 transition">
+                        </button>
+                    </template>
+                </div>
+
+                <p class="text-xs text-[#9CA3AF] mt-1">Kategori baru akan otomatis dibuat jika belum ada.</p>
+                @error('category')
+                    <p class="text-xs text-[#A32D2D] mt-1">{{ $message }}</p>
+                @enderror
+            </div>
                     <div>
                         <label class="block text-sm font-medium text-[#374151] mb-1.5">Stok</label>
-                        <input type="number" name="stock" min="0" value="{{ old('stock', $book->stock ?? 0) }}"inputmode="numeric"
+                        <input type="number" name="stock" min="0" value="{{ old('stock', $book->stock ?? 0) }}" inputmode="numeric"
                         onkeypress="return event.charCode >= 48 && event.charCode <= 57"
                         oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-                        class="w-full rounded-xl border-black/10 text-sm focus:ring-2 focus:ring-[#16331F]/20 focus:border-[#16331F]">@error('stock')
+                        class="w-full rounded-xl border-black/10 text-sm focus:ring-2 focus:ring-[#16331F]/20 focus:border-[#16331F]">
+                        @error('stock')
                             <p class="text-xs text-[#A32D2D] mt-1">{{ $message }}</p>
                         @enderror
                     </div>
