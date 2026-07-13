@@ -3,80 +3,82 @@
 namespace App\Http\Controllers\Member;
 
 use App\Http\Controllers\Controller;
+use App\Models\Book;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class MemberDashboardController extends Controller
 {
     public function index(Request $request)
     {
-        // NOTE: Data di bawah masih statis (dummy).
-        // Ganti dengan query Eloquent (Member, Loan, Fine, Book) sesuai skema database Anda.
+        $user = Auth::user();
 
         $member = [
-            'name'      => 'Julian Aethel',
-            'role'      => 'Sastra Digital',
-            'member_id' => 'AG-9921',
-            'avatar'    => 'https://i.pravatar.cc/150?img=13',
+            'name'      => $user->name,
+            'role'      => 'Anggota',
+            'member_id' => $user->member_id ?? '-',
+            'avatar'    => 'https://ui-avatars.com/api/?name=' . urlencode($user->name) . '&background=1D3B2C&color=fff',
         ];
 
-        $today = 'Senin, 24 Mei 2024';
+        $today = now()->translatedFormat('l, d F Y');
+
+        $allLoans = $user->loans()->with('book', 'fine')->latest('borrowed_at')->get();
+
+        $borrowedActive = $allLoans->whereIn('status', ['pending', 'active', 'overdue']);
+        $lateCount = $allLoans->where('status', 'overdue')->count();
 
         $stats = [
             'borrowed' => [
-                'total' => 4,
-                'note'  => '2 buku baru minggu ini',
+                'total' => $borrowedActive->count(),
+                'note'  => $borrowedActive->where('borrowed_at', '>=', now()->subWeek())->count() . ' buku baru minggu ini',
             ],
             'late' => [
-                'total' => 1,
-                'note'  => 'Segera kembalikan',
+                'total' => $lateCount,
+                'note'  => $lateCount > 0 ? 'Segera kembalikan' : 'Tidak ada keterlambatan',
             ],
-            'fine_total' => 15000,
+            'fine_total' => $user->loans()->whereHas('fine', fn($q) => $q->where('status', 'unpaid'))
+                ->with('fine')->get()->sum(fn($loan) => $loan->fine->amount ?? 0),
         ];
 
-        $loans = [
-            [
-                'title'       => 'Digital Renaissance',
-                'author'      => 'Marcus Vane',
-                'cover'       => 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=200&q=80',
-                'status'      => 'aktif',
-                'borrowed_at' => '12 Mei',
-                'due_at'      => '26 Mei',
-            ],
-            [
-                'title'       => 'Ethical Algorithms',
-                'author'      => 'Dr. Aris Thorne',
-                'cover'       => 'https://images.unsplash.com/photo-1614332287897-cdc485fa562d?w=200&q=80',
-                'status'      => 'terlambat',
-                'borrowed_at' => '02 Mei',
-                'due_at'      => '16 Mei',
-            ],
-            [
-                'title'       => 'The Glass Library',
-                'author'      => 'Elena Glass',
-                'cover'       => 'https://images.unsplash.com/photo-1481487196290-c152efe083f5?w=200&q=80',
-                'status'      => 'selesai',
-                'returned_at' => '20 Mei 2024',
-            ],
-        ];
+        $loans = $allLoans->take(5)->map(function ($loan) {
+            $statusMap = [
+                'pending'  => 'aktif',
+                'active'   => 'aktif',
+                'overdue'  => 'terlambat',
+                'returned' => 'selesai',
+            ];
+
+            return [
+                'title'       => $loan->book->title,
+                'author'      => $loan->book->author,
+                'cover'       => $loan->book->cover ?? 'https://ui-avatars.com/api/?name=' . urlencode($loan->book->title) . '&background=random',
+                'status'      => $statusMap[$loan->status] ?? $loan->status,
+                'borrowed_at' => Carbon::parse($loan->borrowed_at)->translatedFormat('d M'),
+                'due_at'      => Carbon::parse($loan->due_at)->translatedFormat('d M'),
+                'returned_at' => $loan->returned_at ? Carbon::parse($loan->returned_at)->translatedFormat('d M Y') : null,
+            ];
+        });
+
+        $unpaidFine = $user->loans()
+            ->whereHas('fine', fn($q) => $q->where('status', 'unpaid'))
+            ->with('fine')
+            ->get()
+            ->sum(fn($loan) => $loan->fine->amount ?? 0);
 
         $fine = [
-            'total'     => 15000,
-            'late_fee'  => 10000,
-            'admin_fee' => 5000,
+            'total'     => $unpaidFine,
+            'late_fee'  => $unpaidFine,
+            'admin_fee' => 0,
         ];
 
-        $recommendations = [
-            [
-                'title'    => 'Cybernetic Dreams',
-                'category' => 'Sastra Digital',
-                'cover'    => 'https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=200&q=80',
-            ],
-            [
-                'title'    => 'The Last Archivist',
-                'category' => 'Fiksi Ilmiah',
-                'cover'    => 'https://images.unsplash.com/photo-1516339901601-2e1b62dc0c45?w=200&q=80',
-            ],
-        ];
+        $recommendations = Book::inRandomOrder()->limit(2)->get()->map(function ($book) {
+            return [
+                'title'    => $book->title,
+                'category' => $book->category->name ?? 'Umum',
+                'cover'    => $book->cover ?? 'https://ui-avatars.com/api/?name=' . urlencode($book->title) . '&background=random',
+            ];
+        });
 
         return view('member.dashboard', compact(
             'member', 'today', 'stats', 'loans', 'fine', 'recommendations'
