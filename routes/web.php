@@ -10,6 +10,7 @@ use App\Http\Controllers\Member\CatalogController;
 use App\Http\Controllers\Member\LoanController as MemberLoanController;
 use App\Http\Controllers\Member\FineController as MemberFineController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Member\MemberCardController;
 
 use Illuminate\Support\Facades\Route;
 
@@ -154,7 +155,11 @@ Route::middleware(['auth', 'role:admin'])
         return back()->with('error', 'Fitur export belum tersedia.');
     })->name('reports.export');
 
-});
+    Route::patch('/members/{member}/role', [MemberController::class, 'updateRole'])->name('members.updateRole');
+
+    Route::get('/members/{member}/edit', [MemberController::class, 'edit'])->name('members.edit');
+    Route::put('/members/{member}', [MemberController::class, 'update'])->name('members.update');
+    });
 
 /*
 |--------------------------------------------------------------------------
@@ -183,6 +188,9 @@ Route::middleware(['auth', 'role:member'])
     // Payments / Fines
     Route::get('/payments', [MemberFineController::class, 'index'])->name('payments.index');
     Route::post('/fines/{fine}/pay', [MemberFineController::class, 'pay'])->name('fines.pay');
+
+    Route::get('/card', [MemberCardController::class, 'show'])->name('card');
+
 });
 
 require __DIR__.'/auth.php';
