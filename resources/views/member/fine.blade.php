@@ -1,7 +1,7 @@
 @extends('layouts.member')
 
-@section('title', 'Payments')
-@section('page-title', 'Account Status & History')
+@section('title', 'Pembayaran')
+@section('page-title', 'Status Akun & Riwayat')
 
 @section('topbar-search')
     <form method="GET" action="{{ route('member.payments.index') }}" class="relative">
@@ -9,7 +9,7 @@
              fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
         </svg>
-        <input type="text" placeholder="Search payments..."
+        <input type="text" placeholder="Cari pembayaran..."
                class="w-72 pl-9 pr-4 py-2 rounded-full bg-white border border-stone-200 text-sm
                       placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#8B5A2B]/30">
     </form>
@@ -34,38 +34,38 @@
         </div>
     @endif
 
-    {{-- ===== TOP SUMMARY ===== --}}
+    {{-- ===== RINGKASAN ATAS ===== --}}
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <div class="lg:col-span-1 bg-[#152B1E] rounded-2xl p-8 flex flex-col justify-between min-h-[220px]">
-            <p class="text-xs text-stone-300 uppercase tracking-wide">Total Outstanding</p>
-            <p class="text-4xl font-semibold text-white my-4">${{ number_format($totalOutstanding, 2) }}</p>
+            <p class="text-xs text-stone-300 uppercase tracking-wide">Total Tunggakan</p>
+            <p class="text-4xl font-semibold text-white my-4">Rp{{ number_format($totalOutstanding, 0, ',', '.') }}</p>
             <p class="text-sm text-stone-300 leading-relaxed">
-                Calculated from {{ $unpaidFines->count() }} unpaid {{ Str::plural('fine', $unpaidFines->count()) }}.
-                Please settle as soon as possible to avoid account suspension.
+                Dihitung dari {{ $unpaidFines->count() }} denda yang belum dibayar.
+                Segera lunasi untuk menghindari penangguhan akun.
             </p>
         </div>
 
         <div class="bg-white rounded-2xl border border-stone-100 shadow-sm p-6">
-            <p class="text-xs text-stone-400 uppercase tracking-wide mb-2">Unpaid Fines</p>
+            <p class="text-xs text-stone-400 uppercase tracking-wide mb-2">Denda Belum Dibayar</p>
             <h3 class="text-2xl font-semibold text-stone-900">{{ $unpaidFines->count() }}</h3>
-            <p class="text-sm text-stone-500 mt-1">Waiting for payment</p>
+            <p class="text-sm text-stone-500 mt-1">Menunggu pembayaran</p>
         </div>
 
         <div class="bg-white rounded-2xl border border-stone-100 shadow-sm p-6">
-            <p class="text-xs text-stone-400 uppercase tracking-wide mb-2">Last Payment</p>
+            <p class="text-xs text-stone-400 uppercase tracking-wide mb-2">Pembayaran Terakhir</p>
             @if ($lastPayment)
-                <h3 class="text-xl font-semibold text-stone-900">{{ $lastPayment->updated_at->format('M d, Y') }}</h3>
-                <p class="text-sm text-stone-500 mt-1">${{ number_format($lastPayment->amount, 2) }} for "{{ $lastPayment->loan->book->title }}"</p>
+                <h3 class="text-xl font-semibold text-stone-900">{{ $lastPayment->updated_at->format('d M Y') }}</h3>
+                <p class="text-sm text-stone-500 mt-1">Rp{{ number_format($lastPayment->amount, 0, ',', '.') }} untuk "{{ $lastPayment->loan->book->title }}"</p>
             @else
                 <h3 class="text-xl font-semibold text-stone-900">—</h3>
-                <p class="text-sm text-stone-500 mt-1">No payments yet</p>
+                <p class="text-sm text-stone-500 mt-1">Belum ada pembayaran</p>
             @endif
         </div>
     </div>
 
-    {{-- ===== UNPAID FINES: UPLOAD BUKTI BAYAR ===== --}}
+    {{-- ===== DENDA BELUM DIBAYAR: UPLOAD BUKTI BAYAR ===== --}}
     <div class="mb-4 flex items-center justify-between">
-        <h3 class="text-xl font-semibold text-stone-900">Unpaid Fines</h3>
+        <h3 class="text-xl font-semibold text-stone-900">Denda Belum Dibayar</h3>
     </div>
 
     @if ($unpaidFines->isEmpty())
@@ -84,7 +84,7 @@
 
                     <div class="flex-1">
                         <p class="font-semibold text-stone-900">{{ $fine->loan->book->title ?? 'Buku tidak ditemukan' }}</p>
-                        <p class="text-sm text-stone-500">Denda keterlambatan • ${{ number_format($fine->amount, 2) }}</p>
+                        <p class="text-sm text-stone-500">Denda keterlambatan • Rp{{ number_format($fine->amount, 0, ',', '.') }}</p>
                     </div>
 
                     <form method="POST" action="{{ route('member.fines.pay', $fine) }}" enctype="multipart/form-data"
@@ -108,31 +108,31 @@
         </div>
     @endif
 
-    {{-- ===== PAYMENT HISTORY ===== --}}
+    {{-- ===== RIWAYAT PEMBAYARAN ===== --}}
     <div class="bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden">
         <div class="flex items-center justify-between px-6 py-5">
-            <h3 class="text-lg font-semibold text-stone-900">Payment History</h3>
+            <h3 class="text-lg font-semibold text-stone-900">Riwayat Pembayaran</h3>
         </div>
 
         <table class="w-full text-sm">
             <thead class="bg-stone-50 border-y border-stone-100">
                 <tr>
-                    <th class="text-left font-semibold text-stone-500 px-6 py-3">Date</th>
-                    <th class="text-left font-semibold text-stone-500 px-6 py-3">Book</th>
-                    <th class="text-left font-semibold text-stone-500 px-6 py-3">Amount</th>
+                    <th class="text-left font-semibold text-stone-500 px-6 py-3">Tanggal</th>
+                    <th class="text-left font-semibold text-stone-500 px-6 py-3">Buku</th>
+                    <th class="text-left font-semibold text-stone-500 px-6 py-3">Jumlah</th>
                     <th class="text-left font-semibold text-stone-500 px-6 py-3">Status</th>
-                    <th class="text-left font-semibold text-stone-500 px-6 py-3">Receipt</th>
+                    <th class="text-left font-semibold text-stone-500 px-6 py-3">Bukti</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse ($historyFines as $fine)
                     <tr class="border-b border-stone-50 last:border-0">
-                        <td class="px-6 py-4 text-stone-700">{{ $fine->updated_at->format('M d, Y') }}</td>
+                        <td class="px-6 py-4 text-stone-700">{{ $fine->updated_at->format('d M Y') }}</td>
                         <td class="px-6 py-4 text-stone-700">{{ $fine->loan->book->title ?? '-' }}</td>
-                        <td class="px-6 py-4 text-stone-700">${{ number_format($fine->amount, 2) }}</td>
+                        <td class="px-6 py-4 text-stone-700">Rp{{ number_format($fine->amount, 0, ',', '.') }}</td>
                         <td class="px-6 py-4">
                             <x-badge-status :status="$fine->status === 'paid' ? 'available' : 'pending'">
-                                {{ $fine->status === 'paid' ? 'Approved' : 'Pending Review' }}
+                                {{ $fine->status === 'paid' ? 'Disetujui' : 'Menunggu Verifikasi' }}
                             </x-badge-status>
                         </td>
                         <td class="px-6 py-4">

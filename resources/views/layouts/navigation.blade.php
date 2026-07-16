@@ -57,10 +57,6 @@
            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-white/60 hover:bg-white/10 hover:text-white transition">
             <i class="fa-solid fa-gear w-4 text-center"></i> Pengaturan
         </a>
-        <a href="#"
-           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-white/60 hover:bg-white/10 hover:text-white transition">
-            <i class="fa-regular fa-circle-question w-4 text-center"></i> Bantuan
-        </a>
         <form method="POST" action="{{ route('logout') }}">
             @csrf
             <button type="submit"

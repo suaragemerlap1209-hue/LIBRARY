@@ -52,14 +52,15 @@ class MemberDashboardController extends Controller
             return [
                 'title'       => $loan->book->title,
                 'author'      => $loan->book->author,
-                'cover'       => $loan->book->cover ?? 'https://ui-avatars.com/api/?name=' . urlencode($loan->book->title) . '&background=random',
+                'cover'       => $loan->book->cover
+                    ? asset('storage/' . $loan->book->cover)
+                    : 'https://ui-avatars.com/api/?name=' . urlencode($loan->book->title) . '&background=random',
                 'status'      => $statusMap[$loan->status] ?? $loan->status,
-                'borrowed_at' => Carbon::parse($loan->borrowed_at)->translatedFormat('d M'),
-                'due_at'      => Carbon::parse($loan->due_at)->translatedFormat('d M'),
+                'borrowed_at' => $loan->borrowed_at ? Carbon::parse($loan->borrowed_at)->translatedFormat('d M') : '-',
+                'due_at'      => $loan->due_at ? Carbon::parse($loan->due_at)->translatedFormat('d M') : '-',
                 'returned_at' => $loan->returned_at ? Carbon::parse($loan->returned_at)->translatedFormat('d M Y') : null,
             ];
         });
-
         $unpaidFine = $user->loans()
             ->whereHas('fine', fn($q) => $q->where('status', 'unpaid'))
             ->with('fine')
@@ -76,12 +77,26 @@ class MemberDashboardController extends Controller
             return [
                 'title'    => $book->title,
                 'category' => $book->category->name ?? 'Umum',
-                'cover'    => $book->cover ?? 'https://ui-avatars.com/api/?name=' . urlencode($book->title) . '&background=random',
+                'cover'    => $book->cover
+                    ? asset('storage/' . $book->cover)
+                    : 'https://ui-avatars.com/api/?name=' . urlencode($book->title) . '&background=random',
             ];
         });
-
         return view('member.dashboard', compact(
             'member', 'today', 'stats', 'loans', 'fine', 'recommendations'
         ));
     }
+
+    public function settings()
+{
+    return view('member.settings', [
+        'user' => Auth::user(),
+    ]);
+}
+
+public function help()
+{
+    return view('member.help');
+}
+
 }

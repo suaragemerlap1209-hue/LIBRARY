@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Lumina Library') | Lumina</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <link rel="icon" type="image/x-icon" href="{{ asset('images/leaf.png') }}">
 </head>
 <body class="bg-[#F7F5EF] text-stone-800">
     <div class="flex min-h-screen">
@@ -14,15 +16,13 @@
             <div>
                 <div class="flex items-center gap-3 mb-8 px-1">
                     <div class="w-10 h-10 rounded-xl bg-[#F0EEE6] flex items-center justify-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-[#1D3B2C]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c-4 0-7 3-7 7 0 5 4 9 7 11 3-2 7-6 7-11 0-4-3-7-7-7z"/>
-                        </svg>
+                        <i class="fa-solid fa-feather-pointed text-[#1D3B2C] text-lg"></i>
                     </div>
-                        <div class="leading-tight">
-                            <p class="font-serif font-semibold text-[16px] text-stone-900">Lumina</p>
-                            <p class="text-[10px] tracking-widest text-stone-400 font-medium uppercase">{{ Auth::user()->name }}</p>
-                        </div>                
+                    <div class="leading-tight">
+                        <p class="font-serif font-semibold text-[16px] text-stone-900">Lumina Library</p>
+                        <p class="text-[10px] tracking-widest text-stone-400 font-medium uppercase">{{ Auth::user()->name }}</p>
                     </div>
+                </div>
 
                 <nav class="flex flex-col gap-1">
                     @php
@@ -30,6 +30,7 @@
                             ['label' => 'Dashboard', 'route' => 'member.dashboard', 'icon' => 'grid'],
                             ['label' => 'Catalog',   'route' => 'member.catalog.index', 'icon' => 'book'],
                             ['label' => 'Loans',     'route' => 'member.loans.index', 'icon' => 'clipboard'],
+                            ['label' => 'History',   'route' => 'member.loans.history', 'icon' => 'clock'],
                             ['label' => 'Payments',  'route' => 'member.payments.index', 'icon' => 'card'],
                         ];
                     @endphp
@@ -38,7 +39,7 @@
                         @php
                             $isActive = request()->routeIs($item['route']);
                         @endphp
-                        <a href="{{ Route::has($item['route']) ? route($item['route']) : '#' }}"
+                        <a href="{{ Route::has($item['route']) ? route($item['route']) : 'member.history' }}"
                            class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition
                                   {{ $isActive
                                         ? 'bg-[#1D3B2C] text-white'
@@ -93,12 +94,42 @@
                         </svg>
                     </button>
 
-                    <a href="{{ Route::has('member.profile') ? route('member.profile') : '#' }}"
-                       class="text-stone-500 hover:text-stone-800">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                        </svg>
-                    </a>
+                    {{-- ==================== DROPDOWN PROFIL ==================== --}}
+                    <div x-data="{ open: false }" class="relative">
+                        <button @click="open = !open" @click.outside="open = false"
+                                class="text-stone-500 hover:text-stone-800">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                            </svg>
+                        </button>
+
+                        <div x-show="open" x-cloak x-transition
+                            class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-[#ECE7DC] py-1.5 z-20">
+                            <div class="px-4 py-2 border-b border-[#ECE7DC]">
+                                <p class="text-sm font-semibold text-stone-900 truncate">{{ Auth::user()->name }}</p>
+                                <p class="text-xs text-stone-400 truncate">{{ Auth::user()->email }}</p>
+                            </div>
+
+                            <a href="{{ route('member.settings') }}"
+                            class="flex items-center gap-2 px-4 py-2 text-sm text-stone-600 hover:bg-[#F3F1E9] transition">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                </svg>
+                                Pengaturan
+                            </a>
+
+                            <form method="POST" action="{{ route('logout') }}">
+                                @csrf
+                                <button type="submit"
+                                        class="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                    </svg>
+                                    Keluar
+                                </button>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </header>
 

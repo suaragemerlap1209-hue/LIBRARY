@@ -25,7 +25,7 @@
                 <div class="relative flex items-start justify-between">
                     <div>
                         <p class="font-serif text-xl font-semibold tracking-wide">Lumina</p>
-                        <p class="text-[10px] tracking-[0.2em] text-white/60 mt-0.5">LIBRARY MEMBER CARD</p>
+                        <p class="text-[10px] tracking-[0.2em] text-white/60 mt-0.5">KARTU ANGGOTA PERPUSTAKAAN</p>
                     </div>
 
                     <span @class([
@@ -35,7 +35,12 @@
                         'bg-red-400/20 text-red-300' => $user->status === 'blocked',
                     ])>
                         <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
-                        {{ strtoupper($user->status) }}
+                        {{ match($user->status) {
+                            'active' => 'AKTIF',
+                            'suspended' => 'DITANGGUHKAN',
+                            'blocked' => 'DIBLOKIR',
+                            default => strtoupper($user->status),
+                        } }}
                     </span>
                 </div>
 
@@ -45,7 +50,7 @@
                         <span class="text-2xl font-bold text-[#1D3B2C]">{{ $initials }}</span>
                     </div>
                     <div>
-                        <p class="text-[10px] tracking-widest text-white/50">MEMBER NAME</p>
+                        <p class="text-[10px] tracking-widest text-white/50">NAMA ANGGOTA</p>
                         <p class="text-lg font-semibold leading-tight">{{ $user->name }}</p>
                     </div>
                 </div>
@@ -73,7 +78,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
-                <span id="download-btn-text">Download sebagai Gambar</span>
+                <span id="download-btn-text">Unduh sebagai Gambar</span>
             </button>
 
             <button id="print-card-btn"
@@ -81,7 +86,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2m-8 4h8v-6H8v6z" />
                 </svg>
-                Print Card
+                Cetak Kartu
             </button>
 
             <a href="{{ route('member.dashboard') }}"
@@ -133,6 +138,11 @@
         #printable-area, #printable-area * { visibility: visible; }
         #printable-area { position: absolute; top: 0; left: 0; width: 100%; }
         .no-print { display: none !important; }
+       
+        #member-card, #member-card * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
     }
 </style>
 <script>

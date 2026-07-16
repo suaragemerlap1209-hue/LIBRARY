@@ -46,7 +46,7 @@
                         <i class="fa-solid fa-book"></i>
                     </div>
                     <div>
-                        <p class="text-xs text-[#9CA3AF]">Total Buku</p>
+                    <p class="text-xs text-[#9CA3AF]">Total Buku <span class="text-[10px]">(Saat Ini)</span></p>
                         <p class="text-xl font-bold text-[#1F2937]">{{ $totalBooks ?? 0 }}</p>
                     </div>
                 </div>
@@ -58,7 +58,7 @@
                         <i class="fa-solid fa-users"></i>
                     </div>
                     <div>
-                        <p class="text-xs text-[#9CA3AF]">Anggota Aktif</p>
+                        <p class="text-xs text-[#9CA3AF]">Anggota Aktif <span class="text-[10px]">(Saat Ini)</span></p>
                         <p class="text-xl font-bold text-[#1F2937]">{{ $activeMembers ?? 0 }}</p>
                     </div>
                 </div>
@@ -70,7 +70,7 @@
                         <i class="fa-solid fa-arrow-right-arrow-left"></i>
                     </div>
                     <div>
-                        <p class="text-xs text-[#9CA3AF]">Peminjaman (Periode Ini)</p>
+                        <p class="text-xs text-[#9CA3AF]">Denda Terkumpul <span class="text-[10px]">(Periode Ini)</span></p>
                         <p class="text-xl font-bold text-[#1F2937]">{{ $totalLoans ?? 0 }}</p>
                     </div>
                 </div>
@@ -92,7 +92,15 @@
         </div>
 
         {{-- Grafik peminjaman per bulan --}}
-        <x-card title="Peminjaman per Bulan">
+        <x-card>
+            <div class="flex items-center justify-between mb-4">
+                <p class="text-sm font-semibold text-[#1F2937]">Peminjaman per Bulan</p>
+                @if(isset($from) && isset($to))
+                    <p class="text-xs text-[#9CA3AF]">
+                        {{ $from->translatedFormat('d M Y') }} — {{ $to->translatedFormat('d M Y') }}
+                    </p>
+                @endif
+            </div>
             <canvas id="loanChart" height="90"></canvas>
         </x-card>
 

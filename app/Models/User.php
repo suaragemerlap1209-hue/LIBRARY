@@ -13,48 +13,51 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     protected $fillable = [
-    'name', 'email', 'password',
-    'role', 'status', 'birth_date', 'phone', 'address',
-    'member_id', 'max_loans', 'expired_at',
-];
-
-protected function casts(): array
-{
-    return [
-        'email_verified_at' => 'datetime',
-        'password' => 'hashed',
-        'birth_date' => 'date',
-        'expired_at' => 'date',
+        'name', 'email', 'password',
+        'role', 'status', 'birth_date', 'address',
+        'member_id', 'max_loans', 'expired_at',
     ];
-}
 
-public function loans()
-{
-    return $this->hasMany(Loan::class);
-}
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+            'birth_date' => 'date',
+            'expired_at' => 'date',
+        ];
+    }
 
-public function scopeMembers($query)
-{
-    return $query->where('role', 'member');
-}
+    public function loans()
+    {
+        return $this->hasMany(Loan::class);
+    }
 
-protected static function booted(): void
-{
-    static::creating(function (User $user) {
-        if ($user->role === 'member' && empty($user->member_id)) {
-            $year = now()->year;
+    public function scopeMembers($query)
+    {
+        return $query->where('role', 'member');
+    }
 
-            $lastNumber = static::where('member_id', 'like', "LIB-{$year}-%")
-                ->orderByDesc('member_id')
-                ->value('member_id');
+    protected static function booted(): void
+    {
+        static::creating(function (User $user) {
+            if ($user->role === 'member' && empty($user->member_id)) {
+                $year = now()->year;
 
-            $nextNumber = $lastNumber
-                ? ((int) substr($lastNumber, -4)) + 1
-                : 1;
+                $lastNumber = static::where('member_id', 'like', "LIB-{$year}-%")
+                    ->orderByDesc('member_id')
+                    ->value('member_id');
 
-            $user->member_id = sprintf('LIB-%d-%04d', $year, $nextNumber);
-        }
-    });
-}
+                $nextNumber = $lastNumber
+                    ? ((int) substr($lastNumber, -4)) + 1
+                    : 1;
 
+                $user->member_id = sprintf('LIB-%d-%04d', $year, $nextNumber);
+            }
+
+            if ($user->role === 'member' && empty($user->expired_at)) {
+                $user->expired_at = now()->addYears(3);
+            }
+        });
+    }
 }
