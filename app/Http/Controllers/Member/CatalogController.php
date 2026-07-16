@@ -13,7 +13,7 @@ class CatalogController extends Controller
     {
         $query = Book::with('category');
 
-        if ($request->filled('category') && $request->category !== 'All Collections') {
+        if ($request->filled('category') && $request->category !== 'Semua Koleksi') {
             $query->whereHas('category', function ($q) use ($request) {
                 $q->where('name', $request->category);
             });
@@ -25,6 +25,20 @@ class CatalogController extends Controller
                   ->orWhere('author', 'like', '%' . $request->q . '%');
             });
         }
+
+        if ($request->filled('availability')) {
+            if ($request->availability === 'available') {
+                $query->where('stock', '>', 0);
+            } elseif ($request->availability === 'borrowed') {
+                $query->where('stock', '<=', 0);
+            }
+        }
+
+        match ($request->get('sort', 'latest')) {
+            'title_asc'  => $query->orderBy('title', 'asc'),
+            'title_desc' => $query->orderBy('title', 'desc'),
+            default      => $query->latest(),
+        };
 
         return view('member.catalog', [
             'books' => $query->latest()->get(),

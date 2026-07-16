@@ -82,6 +82,9 @@ Route::middleware(['auth', 'role:admin'])
     Route::get('/members', [MemberController::class, 'index'])->name('members.index');
     Route::get('/members/{member}', [MemberController::class, 'show'])->name('members.show');
     Route::patch('/members/{member}/status', [MemberController::class, 'updateStatus'])->name('members.updateStatus');
+    Route::patch('/members/{member}/role', [MemberController::class, 'updateRole'])->name('members.updateRole');
+    Route::get('/members/{member}/edit', [MemberController::class, 'edit'])->name('members.edit');
+    Route::put('/members/{member}', [MemberController::class, 'update'])->name('members.update');
 
     // Books
     Route::resource('books', BookController::class)->except(['show']);
@@ -89,6 +92,7 @@ Route::middleware(['auth', 'role:admin'])
     // Loans
     Route::get('/loans', [AdminLoanController::class, 'index'])->name('loans.index');
     Route::patch('/loans/{loan}/approve', [AdminLoanController::class, 'approve'])->name('loans.approve');
+    Route::patch('/loans/{loan}/decline', [AdminLoanController::class, 'decline'])->name('loans.decline');
     Route::patch('/loans/{loan}/return', [AdminLoanController::class, 'markReturned'])->name('loans.return');
 
     // Payments
@@ -124,11 +128,19 @@ Route::middleware(['auth', 'role:admin'])
             ->latest('borrowed_at')
             ->paginate(10);
 
+        // Chart mengikuti rentang tanggal yang dipilih, bukan selalu 6 bulan terakhir
         $chartLabels = [];
         $chartData = [];
 
-        for ($i = 5; $i >= 0; $i--) {
-            $month = now()->subMonths($i);
+        $cursor = $from->copy()->startOfMonth();
+        $endMonth = $to->copy()->startOfMonth();
+
+        // Jaga-jaga supaya chart tidak meledak kalau rentang tanggal terlalu panjang
+        $monthDiff = $cursor->diffInMonths($endMonth);
+        $monthDiff = min($monthDiff, 11);
+
+        for ($i = 0; $i <= $monthDiff; $i++) {
+            $month = $cursor->copy()->addMonths($i);
 
             $chartLabels[] = $month->translatedFormat('M Y');
 
@@ -143,10 +155,14 @@ Route::middleware(['auth', 'role:admin'])
                 ->where('status', 'active')
                 ->count(),
             'totalLoans' => \App\Models\Loan::whereBetween('borrowed_at', [$from, $to])->count(),
-            'totalFinesCollected' => \App\Models\Fine::where('status', 'paid')->sum('amount'),
+            'totalFinesCollected' => \App\Models\Fine::where('status', 'paid')
+                ->whereBetween('updated_at', [$from, $to])
+                ->sum('amount'),
             'chartLabels' => $chartLabels,
             'chartData' => $chartData,
             'transactions' => $transactions,
+            'from' => $from,
+            'to' => $to,
         ]);
 
     })->name('reports.index');
@@ -155,11 +171,7 @@ Route::middleware(['auth', 'role:admin'])
         return back()->with('error', 'Fitur export belum tersedia.');
     })->name('reports.export');
 
-    Route::patch('/members/{member}/role', [MemberController::class, 'updateRole'])->name('members.updateRole');
-
-    Route::get('/members/{member}/edit', [MemberController::class, 'edit'])->name('members.edit');
-    Route::put('/members/{member}', [MemberController::class, 'update'])->name('members.update');
-    });
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -184,13 +196,17 @@ Route::middleware(['auth', 'role:member'])
     Route::get('/loans', [MemberLoanController::class, 'index'])->name('loans.index');
     Route::patch('/loans/{loan}/return', [MemberLoanController::class, 'returnBook'])->name('loans.return');
     Route::patch('/loans/{loan}/renew', [MemberLoanController::class, 'renew'])->name('loans.renew');
-
+    Route::get('/loans/history', [MemberLoanController::class, 'history'])->name('loans.history');    
+    
     // Payments / Fines
     Route::get('/payments', [MemberFineController::class, 'index'])->name('payments.index');
     Route::post('/fines/{fine}/pay', [MemberFineController::class, 'pay'])->name('fines.pay');
 
     Route::get('/card', [MemberCardController::class, 'show'])->name('card');
 
-});
+    Route::get('/settings', [MemberDashboardController::class, 'settings'])->name('settings');
+    Route::get('/help', [MemberDashboardController::class, 'help'])->name('help');
+
+    });
 
 require __DIR__.'/auth.php';

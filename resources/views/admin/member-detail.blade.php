@@ -33,59 +33,92 @@
                     <div class="flex justify-between py-2"><dt class="text-[#9CA3AF]">Bergabung Sejak</dt><dd class="text-[#1F2937] font-medium">{{ $member->created_at->format('d M Y') }}</dd></div>
                 </dl>
 
-                <div class="mt-6 space-y-2">
-                    <button type="button" x-data="{}" x-on:click="$dispatch('open-modal', 'confirm-status')"
-                            class="w-full bg-[#FDF3E3] text-[#B9882F] text-sm font-medium px-4 py-2.5 rounded-xl hover:bg-[#f9e6c7] transition">
-                        Ubah Status
-                    </button>
-
-                    @if ($member->id !== auth()->id())
+                @if ($member->id !== auth()->id())
+                    <div class="mt-6">
                         <button type="button" x-data="{}" x-on:click="$dispatch('open-modal', 'confirm-role')"
                                 class="w-full bg-[#EEF2FF] text-[#4338CA] text-sm font-medium px-4 py-2.5 rounded-xl hover:bg-[#e0e7ff] transition">
                             Ubah Role
                         </button>
-                    @endif
-                </div>
+                    </div>
+                @endif
             </div>
         </x-card>
 
         <div class="lg:col-span-2 space-y-5">
             <x-card title="Riwayat Peminjaman">
-                <div class="text-center py-8">
-                    <i class="fa-regular fa-clock text-2xl text-[#D1D5DB] mb-2 block"></i>
-                    <p class="text-sm text-[#9CA3AF] italic">Modul Peminjaman belum tersedia.</p>
-                </div>
+                @if ($loans->isEmpty())
+                    <div class="text-center py-8">
+                        <i class="fa-regular fa-clock text-2xl text-[#D1D5DB] mb-2 block"></i>
+                        <p class="text-sm text-[#9CA3AF] italic">Belum ada riwayat peminjaman.</p>
+                    </div>
+                @else
+                    <div class="space-y-3">
+                        @foreach ($loans as $loan)
+                            @php
+                                $badgeMap = [
+                                    'pending'  => 'bg-[#FEF3C7] text-[#B45309]',
+                                    'active'   => 'bg-[#DBEAFE] text-[#1D4ED8]',
+                                    'overdue'  => 'bg-[#FCEBEB] text-[#A32D2D]',
+                                    'returned' => 'bg-[#EAF3DE] text-[#3B6D11]',
+                                ];
+                                $labelMap = [
+                                    'pending'  => 'Menunggu',
+                                    'active'   => 'Aktif',
+                                    'overdue'  => 'Terlambat',
+                                    'returned' => 'Selesai',
+                                ];
+                            @endphp
+                            <div class="flex items-center justify-between py-2.5 border-b border-black/5 last:border-0">
+                                <div>
+                                    <p class="text-sm font-medium text-[#1F2937]">{{ $loan->book->title }}</p>
+                                    <p class="text-xs text-[#9CA3AF]">
+                                        {{ $loan->borrowed_at ? $loan->borrowed_at->translatedFormat('d M Y') : 'Diajukan ' . $loan->created_at->translatedFormat('d M Y') }}
+                                        @if ($loan->due_at)
+                                            • Tempo {{ $loan->due_at->translatedFormat('d M Y') }}
+                                        @endif
+                                    </p>
+                                </div>
+                                <span class="text-[11px] font-medium px-2.5 py-1 rounded-full {{ $badgeMap[$loan->status] ?? 'bg-black/5 text-[#6B7280]' }}">
+                                    {{ $labelMap[$loan->status] ?? ucfirst($loan->status) }}
+                                </span>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
             </x-card>
+
             <x-card title="Riwayat Denda">
-                <div class="text-center py-8">
-                    <i class="fa-regular fa-clock text-2xl text-[#D1D5DB] mb-2 block"></i>
-                    <p class="text-sm text-[#9CA3AF] italic">Modul Denda belum tersedia.</p>
-                </div>
+                @if ($fines->isEmpty())
+                    <div class="text-center py-8">
+                        <i class="fa-regular fa-clock text-2xl text-[#D1D5DB] mb-2 block"></i>
+                        <p class="text-sm text-[#9CA3AF] italic">Belum ada riwayat denda.</p>
+                    </div>
+                @else
+                    <div class="space-y-3">
+                        @foreach ($fines as $fine)
+                            <div class="flex items-center justify-between py-2.5 border-b border-black/5 last:border-0">
+                                <div>
+                                    <p class="text-sm font-medium text-[#1F2937]">{{ $fine->loan->book->title ?? '-' }}</p>
+                                    <p class="text-xs text-[#9CA3AF]">{{ $fine->created_at->translatedFormat('d M Y') }}</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm font-semibold text-[#1F2937]">Rp{{ number_format($fine->amount, 0, ',', '.') }}</p>
+                                    <span @class([
+                                        'text-[11px] font-medium',
+                                        'text-[#B45309]' => $fine->status === 'pending',
+                                        'text-[#A32D2D]' => $fine->status === 'unpaid',
+                                        'text-[#3B6D11]' => $fine->status === 'paid',
+                                    ])>
+                                        {{ ucfirst($fine->status) }}
+                                    </span>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
             </x-card>
         </div>
     </div>
-
-    {{-- Modal: Ubah Status --}}
-    <x-modal name="confirm-status" :show="false" max-width="md">
-        <div class="p-6">
-            <h3 class="text-sm font-semibold text-[#1F2937] mb-2">Ubah Status Anggota?</h3>
-            <p class="text-xs text-[#6B7280] mb-5">Tindakan ini akan mengubah akses "{{ $member->name }}" ke sistem.</p>
-            <form method="POST" action="{{ route('admin.members.updateStatus', $member) }}" class="space-y-4">
-                @csrf
-                @method('PATCH')
-                <select name="status" class="w-full rounded-xl border-black/10 text-sm focus:ring-2 focus:ring-[#16331F]/20 focus:border-[#16331F]">
-                    <option value="active" @selected($member->status === 'active')>Aktif</option>
-                    <option value="suspended" @selected($member->status === 'suspended')>Ditangguhkan</option>
-                    <option value="blocked" @selected($member->status === 'blocked')>Diblokir</option>
-                </select>
-                <div class="flex justify-end gap-2">
-                    <button type="button" x-on:click="$dispatch('close-modal', 'confirm-status')"
-                            class="px-4 py-2 rounded-xl text-sm text-[#6B7280] hover:bg-black/5">Batal</button>
-                    <button type="submit" class="px-4 py-2 rounded-xl text-sm bg-[#16331F] text-white hover:bg-[#1F4429]">Ya, Ubah</button>
-                </div>
-            </form>
-        </div>
-    </x-modal>
 
     {{-- Modal: Ubah Role --}}
     @if ($member->id !== auth()->id())

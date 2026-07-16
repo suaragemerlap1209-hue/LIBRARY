@@ -40,8 +40,17 @@ class MemberController extends Controller
 
     public function show(User $member)
     {
-        // Dihapus batasan role — admin bisa lihat detail siapapun
-        return view('admin.member-detail', compact('member'));
+        $loans = $member->loans()
+            ->with('book', 'fine')
+            ->latest('created_at')
+            ->get();
+
+        $fines = \App\Models\Fine::whereHas('loan', fn ($q) => $q->where('user_id', $member->id))
+            ->with('loan.book')
+            ->latest()
+            ->get();
+
+        return view('admin.member-detail', compact('member', 'loans', 'fines'));
     }
 
    public function updateStatus(Request $request, User $member)

@@ -7,13 +7,39 @@ use App\Models\Book;
 use App\Models\Loan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
 
 class LoanController extends Controller
 {
     public function index()
     {
         return view('member.loan', [
-            'loans' => Auth::user()->loans()->with('book.category', 'fine')->latest('borrowed_at')->paginate(10),
+            'loans' => Auth::user()->loans()
+                ->whereIn('status', ['pending', 'active', 'overdue'])
+                ->with('book.category')
+                ->latest('created_at')
+                ->paginate(10),
+        ]);
+    }
+
+    public function history(Request $request)
+    {
+        $status = $request->get('status', 'all');
+
+        $query = Auth::user()->loans()->with(['book.category', 'fine']);
+
+        if ($status !== 'all') {
+            $query->where('status', $status);
+        }
+
+        if ($request->filled('q')) {
+            $search = $request->q;
+            $query->whereHas('book', fn ($b) => $b->where('title', 'like', "%{$search}%"));
+        }
+
+        return view('member.history', [
+            'loans'  => $query->latest('created_at')->paginate(10)->withQueryString(),
+            'status' => $status,
         ]);
     }
 
@@ -21,19 +47,16 @@ class LoanController extends Controller
     {
         $user = Auth::user();
 
-        // Cek apakah stok buku tersedia
         if ($book->stock < 1) {
             return back()->with('error', 'Stok buku ini sedang habis.');
         }
 
-        // Hitung berapa banyak buku yang sedang dipinjam (belum dikembalikan)
         $activeLoans = $user->loans()->whereIn('status', ['pending', 'active', 'overdue'])->count();
 
         if ($activeLoans >= $user->max_loans) {
             return back()->with('error', "Kamu sudah mencapai batas maksimal peminjaman ({$user->max_loans} buku).");
         }
 
-        // Cek apakah user sudah meminjam buku yang sama dan belum dikembalikan
         $alreadyBorrowed = $user->loans()
             ->where('book_id', $book->id)
             ->whereIn('status', ['pending', 'active', 'overdue'])
@@ -44,11 +67,11 @@ class LoanController extends Controller
         }
 
         DB::transaction(function () use ($user, $book) {
+            // borrowed_at & due_at sengaja tidak diisi di sini.
+            // Baru di-set saat admin approve.
             Loan::create([
                 'user_id' => $user->id,
                 'book_id' => $book->id,
-                'borrowed_at' => now(),
-                'due_at' => now()->addDays(14),
                 'status' => 'pending',
             ]);
 
@@ -64,8 +87,8 @@ class LoanController extends Controller
             abort(403);
         }
 
-        if (! in_array($loan->status, ['pending', 'active', 'overdue'])) {
-            return back()->with('error', 'Buku ini sudah dikembalikan sebelumnya.');
+        if (! in_array($loan->status, ['active', 'overdue'])) {
+            return back()->with('error', 'Buku ini tidak bisa dikembalikan.');
         }
 
         DB::transaction(function () use ($loan) {
@@ -90,14 +113,14 @@ class LoanController extends Controller
             return back()->with('error', 'Buku yang sudah lewat jatuh tempo tidak bisa diperpanjang. Silakan kembalikan dan bayar denda terlebih dahulu.');
         }
 
-        if (! in_array($loan->status, ['pending', 'active'])) {
+        if ($loan->status !== 'active') {
             return back()->with('error', 'Peminjaman ini tidak bisa diperpanjang.');
         }
 
         $loan->update([
-            'due_at' => $loan->due_at->addDays(14),
+            'due_at' => $loan->due_at->addDays(31),
         ]);
 
-        return back()->with('success', "Masa pinjam '{$loan->book->title}' berhasil diperpanjang 14 hari.");
+        return back()->with('success', "Masa pinjam '{$loan->book->title}' berhasil diperpanjang 31 hari.");
     }
 }
