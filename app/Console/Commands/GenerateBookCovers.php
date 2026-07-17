@@ -29,6 +29,7 @@ class GenerateBookCovers extends Command
         foreach ($books as $book) {
             $path = "covers/book-{$book->id}.svg";
 
+            // Skip kalau sudah ada file lokal (kecuali --force dipakai)
             if (! $force && Storage::disk('public')->exists($path)) {
                 $book->update(['cover' => $path]);
                 continue;
@@ -37,6 +38,7 @@ class GenerateBookCovers extends Command
             [$bg, $fg] = $this->colors[$book->id % count($this->colors)];
             $title = htmlspecialchars($book->title, ENT_XML1);
 
+            // Bungkus teks jadi beberapa baris supaya tidak kepotong
             $lines = $this->wrapText($title, 18);
             $lineHeight = 28;
             $startY = 200 - (count($lines) * $lineHeight / 2);
@@ -61,6 +63,7 @@ SVG;
         }
 
         $this->info("Cover lokal berhasil dibuat/diperbarui untuk {$count} buku (dari total {$books->count()}).");
+        $this->line('Pastikan sudah jalankan `php artisan storage:link` supaya file ini bisa diakses browser.');
 
         return self::SUCCESS;
     }
@@ -85,6 +88,6 @@ SVG;
             $lines[] = $current;
         }
 
-        return array_slice($lines, 0, 4);
+        return array_slice($lines, 0, 4); // maksimal 4 baris
     }
 }

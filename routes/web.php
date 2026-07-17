@@ -4,15 +4,19 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\MemberController;
 use App\Http\Controllers\Admin\BookController;
 use App\Http\Controllers\Admin\LoanController as AdminLoanController;
+use App\Http\Controllers\NotificationController;
 
+use App\Http\Controllers\Member\PaymentController;
 use App\Http\Controllers\Member\MemberDashboardController;
 use App\Http\Controllers\Member\CatalogController;
 use App\Http\Controllers\Member\LoanController as MemberLoanController;
-use App\Http\Controllers\Member\FineController as MemberFineController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Member\MemberCardController;
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schedule;
+
+Schedule::command('loans:check-overdue')->dailyAt('00:00');
 
 /*
 |--------------------------------------------------------------------------
@@ -57,7 +61,7 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
 
 /*
 |--------------------------------------------------------------------------
-| Profile
+| Profile & Notifications (semua role yang login)
 |--------------------------------------------------------------------------
 */
 
@@ -65,6 +69,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount'])->name('notifications.unreadCount');
+    Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.readAll');
 });
 
 /*
@@ -78,100 +87,83 @@ Route::middleware(['auth', 'role:admin'])
     ->name('admin.')
     ->group(function () {
 
-    // Members
-    Route::get('/members', [MemberController::class, 'index'])->name('members.index');
-    Route::get('/members/{member}', [MemberController::class, 'show'])->name('members.show');
-    Route::patch('/members/{member}/status', [MemberController::class, 'updateStatus'])->name('members.updateStatus');
-    Route::patch('/members/{member}/role', [MemberController::class, 'updateRole'])->name('members.updateRole');
-    Route::get('/members/{member}/edit', [MemberController::class, 'edit'])->name('members.edit');
-    Route::put('/members/{member}', [MemberController::class, 'update'])->name('members.update');
+        // Members
+        Route::get('/members', [MemberController::class, 'index'])->name('members.index');
+        Route::get('/members/{member}', [MemberController::class, 'show'])->name('members.show');
+        Route::patch('/members/{member}/status', [MemberController::class, 'updateStatus'])->name('members.updateStatus');
 
-    // Books
-    Route::resource('books', BookController::class)->except(['show']);
+        // Books
+        Route::resource('books', BookController::class)->except(['show']);
 
-    // Loans
-    Route::get('/loans', [AdminLoanController::class, 'index'])->name('loans.index');
-    Route::patch('/loans/{loan}/approve', [AdminLoanController::class, 'approve'])->name('loans.approve');
-    Route::patch('/loans/{loan}/decline', [AdminLoanController::class, 'decline'])->name('loans.decline');
-    Route::patch('/loans/{loan}/return', [AdminLoanController::class, 'markReturned'])->name('loans.return');
+        // Loans
+        Route::get('/loans', [AdminLoanController::class, 'index'])->name('loans.index');
+        Route::patch('/loans/{loan}/approve', [AdminLoanController::class, 'approve'])->name('loans.approve');
+        Route::patch('/loans/{loan}/return', [AdminLoanController::class, 'markReturned'])->name('loans.return');
 
-    // Payments
-    Route::get('/payments', function () {
-        return view('admin.payment', [
-            'receipts' => \App\Models\PaymentReceipt::with('fine.loan.user', 'fine.loan.book')
-                ->latest()
-                ->paginate(10),
-        ]);
-    })->name('payments.index');
+        // Payments (verifikasi manual - kalau masih dipakai sebagai fallback admin)
+        Route::get('/payments', function () {
+            return view('admin.payment', [
+                'receipts' => \App\Models\PaymentReceipt::with('fine.loan.user', 'fine.loan.book')
+                    ->latest()
+                    ->paginate(10),
+            ]);
+        })->name('payments.index');
 
-    Route::patch('/payments/{receipt}/approve', function (\App\Models\PaymentReceipt $receipt) {
-        return back();
-    })->name('payments.approve');
+        Route::patch('/payments/{receipt}/approve', function (\App\Models\PaymentReceipt $receipt) {
+            $receipt->update(['status' => 'approved']);
+            $receipt->fine->update(['status' => 'paid']);
 
-    Route::patch('/payments/{receipt}/reject', function (\App\Models\PaymentReceipt $receipt) {
-        return back();
-    })->name('payments.reject');
+            return back()->with('success', 'Pembayaran berhasil disetujui.');
+        })->name('payments.approve');
 
-    // Reports
-    Route::get('/reports', function (\Illuminate\Http\Request $request) {
+        Route::patch('/payments/{receipt}/reject', function (\App\Models\PaymentReceipt $receipt) {
+            $receipt->update(['status' => 'rejected']);
+            $receipt->fine->update(['status' => 'unpaid']);
 
-        $from = $request->filled('from')
-            ? \Carbon\Carbon::parse($request->from)
-            : now()->startOfMonth();
+            return back()->with('success', 'Pembayaran ditolak.');
+        })->name('payments.reject');
 
-        $to = $request->filled('to')
-            ? \Carbon\Carbon::parse($request->to)
-            : now()->endOfMonth();
+        // Reports
+        Route::get('/reports', function (\Illuminate\Http\Request $request) {
+            $from = $request->filled('from')
+                ? \Carbon\Carbon::parse($request->from)
+                : now()->startOfMonth();
 
-        $transactions = \App\Models\Loan::with('user', 'book', 'fine')
-            ->whereBetween('borrowed_at', [$from, $to])
-            ->latest('borrowed_at')
-            ->paginate(10);
+            $to = $request->filled('to')
+                ? \Carbon\Carbon::parse($request->to)
+                : now()->endOfMonth();
 
-        // Chart mengikuti rentang tanggal yang dipilih, bukan selalu 6 bulan terakhir
-        $chartLabels = [];
-        $chartData = [];
+            $transactions = \App\Models\Loan::with('user', 'book', 'fine')
+                ->whereBetween('borrowed_at', [$from, $to])
+                ->latest('borrowed_at')
+                ->paginate(10);
 
-        $cursor = $from->copy()->startOfMonth();
-        $endMonth = $to->copy()->startOfMonth();
+            $chartLabels = [];
+            $chartData = [];
 
-        // Jaga-jaga supaya chart tidak meledak kalau rentang tanggal terlalu panjang
-        $monthDiff = $cursor->diffInMonths($endMonth);
-        $monthDiff = min($monthDiff, 11);
+            for ($i = 5; $i >= 0; $i--) {
+                $month = now()->subMonths($i);
+                $chartLabels[] = $month->translatedFormat('M Y');
+                $chartData[] = \App\Models\Loan::whereYear('borrowed_at', $month->year)
+                    ->whereMonth('borrowed_at', $month->month)
+                    ->count();
+            }
 
-        for ($i = 0; $i <= $monthDiff; $i++) {
-            $month = $cursor->copy()->addMonths($i);
+            return view('admin.report', [
+                'totalBooks' => \App\Models\Book::count(),
+                'activeMembers' => \App\Models\User::where('role', 'member')->where('status', 'active')->count(),
+                'totalLoans' => \App\Models\Loan::whereBetween('borrowed_at', [$from, $to])->count(),
+                'totalFinesCollected' => \App\Models\Fine::where('status', 'paid')->sum('amount'),
+                'chartLabels' => $chartLabels,
+                'chartData' => $chartData,
+                'transactions' => $transactions,
+            ]);
+        })->name('reports.index');
 
-            $chartLabels[] = $month->translatedFormat('M Y');
-
-            $chartData[] = \App\Models\Loan::whereYear('borrowed_at', $month->year)
-                ->whereMonth('borrowed_at', $month->month)
-                ->count();
-        }
-
-        return view('admin.report', [
-            'totalBooks' => \App\Models\Book::count(),
-            'activeMembers' => \App\Models\User::where('role', 'member')
-                ->where('status', 'active')
-                ->count(),
-            'totalLoans' => \App\Models\Loan::whereBetween('borrowed_at', [$from, $to])->count(),
-            'totalFinesCollected' => \App\Models\Fine::where('status', 'paid')
-                ->whereBetween('updated_at', [$from, $to])
-                ->sum('amount'),
-            'chartLabels' => $chartLabels,
-            'chartData' => $chartData,
-            'transactions' => $transactions,
-            'from' => $from,
-            'to' => $to,
-        ]);
-
-    })->name('reports.index');
-
-    Route::get('/reports/export', function () {
-        return back()->with('error', 'Fitur export belum tersedia.');
-    })->name('reports.export');
-
-});
+        Route::get('/reports/export', function () {
+            return back()->with('error', 'Fitur export belum tersedia.');
+        })->name('reports.export');
+    });
 
 /*
 |--------------------------------------------------------------------------
@@ -184,29 +176,27 @@ Route::middleware(['auth', 'role:member'])
     ->name('member.')
     ->group(function () {
 
-    // Dashboard
-    Route::get('/dashboard', [MemberDashboardController::class, 'index'])->name('dashboard');
+        // Dashboard
+        Route::get('/dashboard', [MemberDashboardController::class, 'index'])->name('dashboard');
 
-    // Catalog
-    Route::get('/catalog', [CatalogController::class, 'index'])->name('catalog.index');
-    Route::get('/catalog/{book}', [CatalogController::class, 'show'])->name('catalog.show');
+        // Catalog
+        Route::get('/catalog', [CatalogController::class, 'index'])->name('catalog.index');
+        Route::get('/catalog/{book}', [CatalogController::class, 'show'])->name('catalog.show');
 
-    // Loans
-    Route::post('/catalog/{book}/loan', [MemberLoanController::class, 'store'])->name('loans.store');
-    Route::get('/loans', [MemberLoanController::class, 'index'])->name('loans.index');
-    Route::patch('/loans/{loan}/return', [MemberLoanController::class, 'returnBook'])->name('loans.return');
-    Route::patch('/loans/{loan}/renew', [MemberLoanController::class, 'renew'])->name('loans.renew');
-    Route::get('/loans/history', [MemberLoanController::class, 'history'])->name('loans.history');    
-    
-    // Payments / Fines
-    Route::get('/payments', [MemberFineController::class, 'index'])->name('payments.index');
-    Route::post('/fines/{fine}/pay', [MemberFineController::class, 'pay'])->name('fines.pay');
+        // Loans
+        Route::post('/catalog/{book}/loan', [MemberLoanController::class, 'store'])->name('loans.store');
+        Route::get('/loans', [MemberLoanController::class, 'index'])->name('loans.index');
+        Route::patch('/loans/{loan}/return', [MemberLoanController::class, 'returnBook'])->name('loans.return');
+        Route::patch('/loans/{loan}/renew', [MemberLoanController::class, 'renew'])->name('loans.renew');
 
-    Route::get('/card', [MemberCardController::class, 'show'])->name('card');
+        // Payments (pakai Member\PaymentController - logic Midtrans dikerjakan tim lain)
+        Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
+        Route::get('/payments/{fine}', [PaymentController::class, 'show'])->name('payments.show');
+        Route::post('/payments/{fine}/manual', [PaymentController::class, 'manual'])->name('payments.manual');
+        Route::get('/payments/{fine}/midtrans', [PaymentController::class, 'midtrans'])->name('payments.midtrans');
 
-    Route::get('/settings', [MemberDashboardController::class, 'settings'])->name('settings');
-    Route::get('/help', [MemberDashboardController::class, 'help'])->name('help');
-
+        // Kartu anggota digital
+        Route::get('/card', [MemberCardController::class, 'show'])->name('card');
     });
 
 require __DIR__.'/auth.php';
