@@ -1,9 +1,11 @@
 <?php
+// routes/web.php
 
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\MemberController;
 use App\Http\Controllers\Admin\BookController;
 use App\Http\Controllers\Admin\LoanController as AdminLoanController;
+use App\Http\Controllers\Admin\FineController as AdminFineController; // ← TAMBAH INI
 
 use App\Http\Controllers\Member\MemberDashboardController;
 use App\Http\Controllers\Member\CatalogController;
@@ -11,6 +13,7 @@ use App\Http\Controllers\Member\LoanController as MemberLoanController;
 use App\Http\Controllers\Member\FineController as MemberFineController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Member\MemberCardController;
+use App\Http\Controllers\PaymentController;
 
 use Illuminate\Support\Facades\Route;
 
@@ -26,7 +29,7 @@ Route::get('/', function () {
 
 Route::get('/katalog', function () {
     return view('pages.catalog', [
-        'books' => \App\Models\Book::with('category')->latest()->get(),
+        'books'      => \App\Models\Book::with('category')->latest()->get(),
         'categories' => \App\Models\Category::pluck('name'),
     ]);
 })->name('catalog.public');
@@ -37,13 +40,17 @@ Route::get('/katalog/{book}', function (\App\Models\Book $book) {
     ]);
 })->name('catalog.show');
 
-Route::get('/tentang', function () {
-    return view('pages.about');
-})->name('about');
+Route::get('/tentang', function () { return view('pages.about'); })->name('about');
+Route::get('/bantuan', function () { return view('pages.help'); })->name('bantuan');
 
-Route::get('/bantuan', function () {
-    return view('pages.help');
-})->name('bantuan');
+/*
+|--------------------------------------------------------------------------
+| Midtrans Webhook — HARUS di luar CSRF middleware
+|--------------------------------------------------------------------------
+*/
+
+Route::post('/payment/notification', [PaymentController::class, 'notification'])
+    ->name('payment.notification');
 
 /*
 |--------------------------------------------------------------------------
@@ -95,82 +102,50 @@ Route::middleware(['auth', 'role:admin'])
     Route::patch('/loans/{loan}/decline', [AdminLoanController::class, 'decline'])->name('loans.decline');
     Route::patch('/loans/{loan}/return', [AdminLoanController::class, 'markReturned'])->name('loans.return');
 
-    // Payments
-    Route::get('/payments', function () {
-        return view('admin.payment', [
-            'receipts' => \App\Models\PaymentReceipt::with('fine.loan.user', 'fine.loan.book')
-                ->latest()
-                ->paginate(10),
-        ]);
-    })->name('payments.index');
-
-    Route::patch('/payments/{receipt}/approve', function (\App\Models\PaymentReceipt $receipt) {
-        return back();
-    })->name('payments.approve');
-
-    Route::patch('/payments/{receipt}/reject', function (\App\Models\PaymentReceipt $receipt) {
-        return back();
-    })->name('payments.reject');
+    // Fines — Admin kelola denda + approve tunai ← BARU
+    Route::get('/fines', [AdminFineController::class, 'index'])->name('fines.index');
+    Route::patch('/fines/{fine}/mark-paid', [AdminFineController::class, 'markPaid'])->name('fines.markPaid');
+    Route::get('/payments', [AdminFineController::class, 'payments'])->name('fines.payments');
 
     // Reports
     Route::get('/reports', function (\Illuminate\Http\Request $request) {
-
-        $from = $request->filled('from')
-            ? \Carbon\Carbon::parse($request->from)
-            : now()->startOfMonth();
-
-        $to = $request->filled('to')
-            ? \Carbon\Carbon::parse($request->to)
-            : now()->endOfMonth();
+        $from = $request->filled('from') ? \Carbon\Carbon::parse($request->from) : now()->startOfMonth();
+        $to   = $request->filled('to')   ? \Carbon\Carbon::parse($request->to)   : now()->endOfMonth();
 
         $transactions = \App\Models\Loan::with('user', 'book', 'fine')
             ->whereBetween('borrowed_at', [$from, $to])
             ->latest('borrowed_at')
             ->paginate(10);
 
-        // Chart mengikuti rentang tanggal yang dipilih, bukan selalu 6 bulan terakhir
         $chartLabels = [];
-        $chartData = [];
-
-        $cursor = $from->copy()->startOfMonth();
-        $endMonth = $to->copy()->startOfMonth();
-
-        // Jaga-jaga supaya chart tidak meledak kalau rentang tanggal terlalu panjang
-        $monthDiff = $cursor->diffInMonths($endMonth);
-        $monthDiff = min($monthDiff, 11);
+        $chartData   = [];
+        $cursor      = $from->copy()->startOfMonth();
+        $monthDiff   = min($cursor->diffInMonths($to->copy()->startOfMonth()), 11);
 
         for ($i = 0; $i <= $monthDiff; $i++) {
-            $month = $cursor->copy()->addMonths($i);
-
-            $chartLabels[] = $month->translatedFormat('M Y');
-
-            $chartData[] = \App\Models\Loan::whereYear('borrowed_at', $month->year)
-                ->whereMonth('borrowed_at', $month->month)
-                ->count();
+            $month          = $cursor->copy()->addMonths($i);
+            $chartLabels[]  = $month->translatedFormat('M Y');
+            $chartData[]    = \App\Models\Loan::whereYear('borrowed_at', $month->year)
+                                ->whereMonth('borrowed_at', $month->month)
+                                ->count();
         }
 
         return view('admin.report', [
-            'totalBooks' => \App\Models\Book::count(),
-            'activeMembers' => \App\Models\User::where('role', 'member')
-                ->where('status', 'active')
-                ->count(),
-            'totalLoans' => \App\Models\Loan::whereBetween('borrowed_at', [$from, $to])->count(),
-            'totalFinesCollected' => \App\Models\Fine::where('status', 'paid')
-                ->whereBetween('updated_at', [$from, $to])
-                ->sum('amount'),
-            'chartLabels' => $chartLabels,
-            'chartData' => $chartData,
-            'transactions' => $transactions,
-            'from' => $from,
-            'to' => $to,
+            'totalBooks'          => \App\Models\Book::count(),
+            'activeMembers'       => \App\Models\User::where('role', 'member')->where('status', 'active')->count(),
+            'totalLoans'          => \App\Models\Loan::whereBetween('borrowed_at', [$from, $to])->count(),
+            'totalFinesCollected' => \App\Models\Fine::where('status', 'paid')->whereBetween('updated_at', [$from, $to])->sum('amount'),
+            'chartLabels'         => $chartLabels,
+            'chartData'           => $chartData,
+            'transactions'        => $transactions,
+            'from'                => $from,
+            'to'                  => $to,
         ]);
-
     })->name('reports.index');
 
     Route::get('/reports/export', function () {
         return back()->with('error', 'Fitur export belum tersedia.');
     })->name('reports.export');
-
 });
 
 /*
@@ -179,34 +154,40 @@ Route::middleware(['auth', 'role:admin'])
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'role:member'])
+Route::middleware(['auth', 'role:member', 'verified'])
     ->prefix('member')
     ->name('member.')
     ->group(function () {
 
-    // Dashboard
     Route::get('/dashboard', [MemberDashboardController::class, 'index'])->name('dashboard');
 
-    // Catalog
     Route::get('/catalog', [CatalogController::class, 'index'])->name('catalog.index');
     Route::get('/catalog/{book}', [CatalogController::class, 'show'])->name('catalog.show');
 
-    // Loans
     Route::post('/catalog/{book}/loan', [MemberLoanController::class, 'store'])->name('loans.store');
     Route::get('/loans', [MemberLoanController::class, 'index'])->name('loans.index');
     Route::patch('/loans/{loan}/return', [MemberLoanController::class, 'returnBook'])->name('loans.return');
     Route::patch('/loans/{loan}/renew', [MemberLoanController::class, 'renew'])->name('loans.renew');
-    Route::get('/loans/history', [MemberLoanController::class, 'history'])->name('loans.history');    
-    
-    // Payments / Fines
+    Route::get('/loans/history', [MemberLoanController::class, 'history'])->name('loans.history');
+
+    // Fines & Payments
     Route::get('/payments', [MemberFineController::class, 'index'])->name('payments.index');
-    Route::post('/fines/{fine}/pay', [MemberFineController::class, 'pay'])->name('fines.pay');
+    Route::get('/fines/{fine}/pay', [MemberFineController::class, 'pay'])->name('fines.pay');
 
     Route::get('/card', [MemberCardController::class, 'show'])->name('card');
-
     Route::get('/settings', [MemberDashboardController::class, 'settings'])->name('settings');
     Route::get('/help', [MemberDashboardController::class, 'help'])->name('help');
+});
 
-    });
+/*
+|--------------------------------------------------------------------------
+| Midtrans Checkout — auth tapi di luar group member
+| (karena PaymentController bukan di namespace Member)
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/payment/{fine}/checkout', [PaymentController::class, 'checkout'])
+    ->middleware(['auth'])
+    ->name('payment.checkout');
 
 require __DIR__.'/auth.php';

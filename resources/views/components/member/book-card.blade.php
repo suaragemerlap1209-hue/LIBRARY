@@ -8,19 +8,26 @@
         : 'https://placehold.co/300x360/2f4f3f/e8dcc4?text=' . urlencode($book->title);
 @endphp
 
-<div class="bg-white rounded-2xl border border-stone-100 shadow-sm p-4 flex flex-col">
-    <<a href="{{ route('member.catalog.show', $book) }}">
-        <h3 class="text-base font-semibold text-stone-900 truncate hover:underline">{{ $book->title }}</h3>
-    </a>
-    <p class="text-sm text-stone-500 mb-3">{{ $book->author }}</p>
+    <div class="bg-white rounded-2xl border border-stone-100 shadow-sm p-4 flex flex-col">
+        <a href="{{ route('member.catalog.show', $book) }}">
+            <img src="{{ $cover }}" alt="{{ $book->title }}"
+                    class="w-full h-48 object-cover rounded-xl mb-3">
+        </a>
 
-    <a href="{{ route('member.catalog.show', $book) }}"
-       class="inline-flex items-center gap-1 text-sm font-medium text-[#2F5233] hover:underline mb-4">
-        Lihat Detail
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-        </svg>
-    </a>
+        <a href="{{ route('member.catalog.show', $book) }}">
+            <h3 class="text-base font-semibold text-stone-900 truncate hover:underline">{{ $book->title }}</h3>
+        </a>
+        
+        <p class="text-sm text-stone-500 mb-3">{{ $book->author }}</p>
+
+        <a href="{{ route('member.catalog.show', $book) }}"
+            class="inline-flex items-center gap-1 text-sm font-medium text-[#2F5233] hover:underline mb-4">
+                Lihat Detail
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                </svg>
+            </a>
+        </a>
 
     @if ($isAvailable)
         <form method="POST" action="{{ route('member.loans.store', $book) }}" class="mt-auto">
