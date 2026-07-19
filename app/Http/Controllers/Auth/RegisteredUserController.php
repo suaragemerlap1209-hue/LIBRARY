@@ -54,11 +54,13 @@ class RegisteredUserController extends Controller
             'status' => 'active',
             'expired_at' => now()->addYears(3),
         ]);
+                event(new Registered($user));
+                Auth::login($user);
 
-        event(new Registered($user));
+                // UBAH INI:
+                return redirect()->route('member.dashboard');
 
-        Auth::login($user);
-
-        return redirect()->route('member.dashboard');
+                // JADI INI:
+                return redirect()->route('verification.notice');
     }
 }

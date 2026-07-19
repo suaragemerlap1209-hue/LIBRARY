@@ -3,65 +3,70 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\PaymentReceipt;
-use App\Notifications\PaymentApprovedNotification;
-use App\Notifications\PaymentRejectedNotification;
+use App\Models\Fine;
+use App\Notifications\FinePaymentNotification;
 use Illuminate\Http\Request;
 
 class FineController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return view('admin.payment', [
-            'receipts' => PaymentReceipt::with('fine.loan.user', 'fine.loan.book')
-                ->latest()
-                ->paginate(10),
-        ]);
-    }
+        $query = Fine::with('loan.user', 'loan.book')
+            ->latest('updated_at');
 
-    public function approve(PaymentReceipt $receipt)
-    {
-        if ($receipt->status !== 'pending') {
-            return back()->with('error', 'Bukti pembayaran ini sudah diproses sebelumnya.');
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
         }
 
-        $receipt->update(['status' => 'approved']);
-        $receipt->fine->update(['status' => 'paid']);
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('loan.user', fn($u) => $u->where('name', 'like', "%{$search}%"))
+                  ->orWhereHas('loan.book', fn($b) => $b->where('title', 'like', "%{$search}%"));
+            });
+        }
 
-        // Turunkan status akun user kalau denda lain sudah tidak ada yang unpaid melewati ambang batas
-        $user = $receipt->fine->loan->user;
-        $stillUnpaid = $user->loans()
-            ->whereHas('fine', fn ($q) => $q->where('status', 'unpaid'))
-            ->with('fine')
-            ->get()
-            ->sum(fn ($loan) => $loan->fine->amount ?? 0);
+        $fines = $query->paginate(15)->withQueryString();
 
-        if ($stillUnpaid < 10 && $user->status !== 'active') {
+        $stats = [
+            'total_unpaid'     => Fine::where('status', 'unpaid')->count(),
+            'total_pending'    => Fine::whereIn('status', ['pending', 'processing'])->count(),
+            'total_paid'       => Fine::where('status', 'paid')->count(),
+            'amount_collected' => Fine::where('status', 'paid')->sum('amount'),
+        ];
+
+        return view('admin.payment', compact('fines', 'stats'));
+    }
+
+    public function markPaid(Fine $fine)
+    {
+        if ($fine->status === 'processing') {
+            return back()->with('error', 'Denda ini sedang dalam proses pembayaran Midtrans. Tunggu konfirmasi otomatis.');
+        }
+
+        if ($fine->status === 'paid') {
+            return back()->with('error', 'Denda ini sudah lunas.');
+        }
+
+        $fine->update([
+            'status'       => 'paid',
+            'payment_type' => 'cash',
+            'paid_at'      => now(),
+        ]);
+
+        // Pulihkan status user kalau tidak ada denda lain
+        $user = $fine->load('loan.user')->loan->user;
+        $hasUnpaidFines = $user->loans()
+            ->whereHas('fine', fn($q) => $q->whereIn('status', ['unpaid', 'pending', 'processing']))
+            ->exists();
+
+        if (!$hasUnpaidFines && in_array($user->status, ['suspended', 'blocked'])) {
             $user->update(['status' => 'active']);
         }
 
-        $user->notify(new PaymentApprovedNotification($receipt->fine));
+        // Kirim notif email ke member
+        $user->notify(new FinePaymentNotification($fine));
 
-        return back()->with('success', 'Pembayaran berhasil disetujui.');
-    }
-
-    public function reject(Request $request, PaymentReceipt $receipt)
-    {
-        if ($receipt->status !== 'pending') {
-            return back()->with('error', 'Bukti pembayaran ini sudah diproses sebelumnya.');
-        }
-
-        $request->validate([
-            'reason' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        $receipt->update(['status' => 'rejected']);
-        $receipt->fine->update(['status' => 'unpaid']);
-
-        $receipt->fine->loan->user->notify(
-            new PaymentRejectedNotification($receipt->fine, $request->input('reason'))
-        );
-
-        return back()->with('success', 'Pembayaran ditolak, member akan diminta upload ulang.');
+        return back()->with('success', "Denda #{$fine->id} berhasil ditandai lunas (tunai).");
     }
 }

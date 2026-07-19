@@ -71,12 +71,12 @@ class DashboardController extends Controller
             ->get()
             ->map(fn ($loan) => [
                 'title' => 'Peminjaman baru',
-                'description' => $loan->user->name . ' meminjam "' . $loan->book->title . '"',
+                'description' => ($loan->user?->name ?? 'Anggota dihapus') . ' meminjam "' . ($loan->book?->title ?? 'Buku tidak ditemukan') . '"',
                 'time' => $loan->created_at->diffForHumans(),
                 'timestamp' => $loan->created_at,
                 'color' => 'bg-amber-400',
             ]);
-
+            
         $recentActivities = $recentMembers
             ->concat($recentLoans)
             ->sortByDesc('timestamp')

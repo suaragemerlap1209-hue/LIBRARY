@@ -21,33 +21,33 @@
             Dashboard
         </a>
 
-        <a href="{{ Route::has('admin.books.index') ? route('admin.books.index') : '#' }}"
+        <a href="{{ route('admin.books.index') }}"
            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition
                   {{ request()->routeIs('admin.books.*') ? 'bg-white/10 text-white font-medium' : 'text-white/60 hover:bg-white/10 hover:text-white' }}">
             <i class="fa-solid fa-book w-4 text-center {{ request()->routeIs('admin.books.*') ? 'text-[#E8B36A]' : '' }}"></i>
             Manajemen Buku
         </a>
 
-        <a href="{{ Route::has('admin.members.index') ? route('admin.members.index') : '#' }}"
+        <a href="{{ route('admin.members.index') }}"
            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition
                   {{ request()->routeIs('admin.members.*') ? 'bg-white/10 text-white font-medium' : 'text-white/60 hover:bg-white/10 hover:text-white' }}">
             <i class="fa-solid fa-users w-4 text-center {{ request()->routeIs('admin.members.*') ? 'text-[#E8B36A]' : '' }}"></i>
             Manajemen Anggota
         </a>
 
-        <a href="{{ Route::has('admin.payments.index') ? route('admin.payments.index') : '#' }}"
+        <a href="{{ route('admin.fines.index') }}"
            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition
-                  {{ request()->routeIs('admin.payments.*') ? 'bg-white/10 text-white font-medium' : 'text-white/60 hover:bg-white/10 hover:text-white' }}">
-            <i class="fa-solid fa-file-invoice w-4 text-center {{ request()->routeIs('admin.payments.*') ? 'text-[#E8B36A]' : '' }}"></i>
-            Verifikasi Pembayaran
+                  {{ request()->routeIs('admin.fines.*') ? 'bg-white/10 text-white font-medium' : 'text-white/60 hover:bg-white/10 hover:text-white' }}">
+            <i class="fa-solid fa-file-invoice w-4 text-center {{ request()->routeIs('admin.fines.*') ? 'text-[#E8B36A]' : '' }}"></i>
+            Denda & Pembayaran
         </a>
 
-        <a href="{{ Route::has('admin.reports.index') ? route('admin.reports.index') : '#' }}"
-            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition
-                    {{ request()->routeIs('admin.reports.*') ? 'bg-white/10 text-white font-medium' : 'text-white/60 hover:bg-white/10 hover:text-white' }}">
-                <i class="fa-solid fa-chart-bar w-4 text-center {{ request()->routeIs('admin.reports.*') ? 'text-[#E8B36A]' : '' }}"></i>
-                Laporan
-         </a>
+        <a href="{{ route('admin.reports.index') }}"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition
+                  {{ request()->routeIs('admin.reports.*') ? 'bg-white/10 text-white font-medium' : 'text-white/60 hover:bg-white/10 hover:text-white' }}">
+            <i class="fa-solid fa-chart-bar w-4 text-center {{ request()->routeIs('admin.reports.*') ? 'text-[#E8B36A]' : '' }}"></i>
+            Laporan
+        </a>
 
     </nav>
 
